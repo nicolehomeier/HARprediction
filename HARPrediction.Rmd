@@ -1,35 +1,52 @@
-library(ggplot2)
-source(multiplot)
+---
+title: "HARPrediction"
+author: "Nicole Homeier"
+date: "11/1/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# HAR Prediction Exercise for the PML Course
+```{r load}
+library(caret)
+library(randomForest)
+options(warn=-1)
+```
+First read the data in and remove set up variables that can't be used for prediction.
+```{r read}
 ds = read.csv("pml-training.csv")
 test = read.csv("pml-testing.csv")
-#remove set up variables that can't be used for prediction
 ds = ds[,-(1:7)]
 test = test[,-(1:7)]
-#had some trouble with numbers read in as factors due to missing values, so do this
+```
+had some trouble with numbers read in as factors due to missing values, so do this
+```{r cleanup1}
 nds = ds
 for (i in 1:(ncol(ds)-1)){ #skip the classe var
-    if (class(ds[,i])=="factor"){nds[,i] = as.numeric(as.character(ds[,i]))}
+    if (class(ds[,i])=="factor"){nds[,i] = as.numeric(as.character(ds[,i]),verbose=FALSE)}
 }
+```
 
+check for many missing values and remove
 
-#check for many missing values and remove
+```{r remove1}
 ctna = sapply(ds,function(x) sum(is.na(x)))
 nds = ds[,-which(ctna>5000)]
 namesnds = names(ds)[which(ctna>5000)]
-
-#check out the test set, no use in predicting on variable that aren't available in the test set
+```
+check out the test set, no use in predicting on variable that aren't available in the test set
+```{r checktest}
 ctnatest = sapply(test, function(x) sum(is.na(x)))
 namestest = names(test)[which(ctnatest==0)]
-
-#now have a better set of variables for fitting
 cnds = nds[,which(names(nds) %in% namestest)]
 cnds$classe = nds$classe
-
-for (i in 1:(ncol(cnds)-1)){
-    if (class(cnds[,i])=="factor"){cnds[,i] = as.numeric(as.character(cnds[,i]))}
-}
-
-#check where correlation between predictors is high, remove when needed
+```
+now have a better set of variables for fitting, but we can do better
+check where correlation between predictors is high, remove when needed
+```{r corr}
 M = cor(cnds[,-ncol(cnds)])
 highcorr=which(M>.8 & M <1,arr.ind=T)
 names(cnds)[highcorr[,2]]
@@ -37,45 +54,71 @@ names(highcorr[,1])
 dropvars = c("roll_belt","accel_belt_y","magnet_belt_x","gyros_forearm_z","magnet_arm_x","accel_dumbbell_x","magnet_arm_y","accel_dumbbell_z")
 dpts = which(names(cnds) %in% dropvars)
 cnds = cnds[,-dpts]
+```
 
-#do a glm fit to get rid of the remaining non-important "predictors"
+do a glm fit to get rid of the remaining non-important "predictors"
+```{r glmcull}
 glmfit = glm(classe~.,data=cnds,family=binomial)
 summary(glmfit)
 dropvars = c("gyros_belt_y","gyros_arm_x","gyros_arm_z","pitch_dumbbell","accel_dumbbell_y","magnet_forearm_z")
 dpts = which(names(cnds) %in% dropvars)
 cnds = cnds[,-dpts]
-
-#write out in case want to start here later
+```
+write out in case want to start here later
+```{r writeout}
 write.csv(cnds,"reduced-pml-training.csv",row.names=F)
+```
 
-cnds = read.csv("reduced-pml-training.csv")
-#now create some training and testing data and train some models
+now create some training and testing data and train some models
+```{r trainit}
 set.seed(3233)
 inTrain = createDataPartition(cnds$classe,p=.6,list=TRUE)[[1]]
 training = cnds[inTrain,]
 testing = cnds[-inTrain,]
+```
+```{r treemodel}
 rpart.grid = expand.grid(cp=seq(0,0.01,0.0005))
 rpartfit = train(classe~.,data=training,method="rpart",tuneGrid=rpart.grid,trControl=trainControl(method="cv"))
 predrpart = predict(rpartfit,newdata=testing)
 confusionMatrix(predrpart,testing$classe)
+```
 
+```{r ldamodel}
 ldafit = train(classe~.,data=training,method="lda",preProcess=c("center","scale"),trControl=trainControl(method="cv"))
 predlda = predict(ldafit,newdata=testing)
 confusionMatrix(predlda,testing$classe)
-
+```
+```{r knnmodel}
 knn.grid = expand.grid(k=seq(3,12,2))
 knnfit = train(classe~.,data=training,method="knn",preProcess=c("center","scale"),tuneGrid=knn.grid,trControl=trainControl(method="cv"))
 predknn = predict(knnfit,newdata=testing)
 confusionMatrix(predknn,testing$classe)
+```
 
+```{r randomforestmodel}
 rffit = randomForest(classe~.,data=training)
 predrf = predict(rffit,newdata=testing)
 confusionMatrix(predrf,testing$classe)
+```
+```{r rffit,echo=FALSE}
 plot(rffit)
-#can see that don't need more than 200 trees, let's also see if we can get the best mtry param
+```
+can see that don't need more than 200 trees
 
-tuneRF(cnds[,1:38],cnds[,39],mtryStart=6,ntreeTry=120,stepFactor=1.2,improve=0.01,trace=TRUE,plot=TRUE,doBest=FALSE)
+```{r mtry}
+rffit$mtry
+```
 
-rffit = randomForest(classe~.,data=training,ntrees=200,mtry=11)
-predrf = predict(rffit,newdata=testing)
-confusionMatrix(predrf,testing$classe)
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
