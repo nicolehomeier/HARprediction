@@ -140,8 +140,7 @@ $(document).ready(function () {
 <p>First read the data in and remove set up variables that can’t be used for prediction.</p>
 <pre class="r"><code>ds = read.csv(&quot;pml-training.csv&quot;)
 test = read.csv(&quot;pml-testing.csv&quot;)
-ds = ds[,-(1:7)]
-test = test[,-(1:7)]</code></pre>
+ds = ds[,-(1:7)]</code></pre>
 <p>had some trouble with numbers read in as factors due to missing values, so do this</p>
 <pre class="r"><code>nds = ds
 for (i in 1:(ncol(ds)-1)){ #skip the classe var
