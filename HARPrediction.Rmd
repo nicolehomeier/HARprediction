@@ -20,7 +20,6 @@ First read the data in and remove set up variables that can't be used for predic
 ds = read.csv("pml-training.csv")
 test = read.csv("pml-testing.csv")
 ds = ds[,-(1:7)]
-test = test[,-(1:7)]
 ```
 had some trouble with numbers read in as factors due to missing values, so do this
 ```{r cleanup1}
@@ -82,17 +81,23 @@ rpartfit = train(classe~.,data=training,method="rpart",tuneGrid=rpart.grid,trCon
 predrpart = predict(rpartfit,newdata=testing)
 confusionMatrix(predrpart,testing$classe)
 ```
-
+```{r plrpart}
+plot(rpartfit)
+```
 ```{r ldamodel}
 ldafit = train(classe~.,data=training,method="lda",preProcess=c("center","scale"),trControl=trainControl(method="cv"))
 predlda = predict(ldafit,newdata=testing)
 confusionMatrix(predlda,testing$classe)
 ```
+
 ```{r knnmodel}
 knn.grid = expand.grid(k=seq(3,12,2))
 knnfit = train(classe~.,data=training,method="knn",preProcess=c("center","scale"),tuneGrid=knn.grid,trControl=trainControl(method="cv"))
 predknn = predict(knnfit,newdata=testing)
 confusionMatrix(predknn,testing$classe)
+```
+```{r plknn}
+plot(knnfit)
 ```
 
 ```{r randomforestmodel}
@@ -103,22 +108,23 @@ confusionMatrix(predrf,testing$classe)
 ```{r rffit,echo=FALSE}
 plot(rffit)
 ```
+
 can see that don't need more than 200 trees
 
 ```{r mtry}
 rffit$mtry
 ```
+it would appear that a random forest approach gives the best results, but outside of this exercise it would make me worry about overfitting. Here I've held back 40% of the data so unlikely. Now do some estimation so see how expectations for accuracy on the 20 test set values.
 
-```{r cars}
-summary(cars)
+```{r model20}
+inTrain = createDataPartition(cnds$classe,p=(1-20/nrow(cnds)),list=TRUE)[[1]]
+training = cnds[inTrain,]
+testing = cnds[-inTrain,]
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r finalrffit}
+finalfit = randomForest(classe~.,data=training,mtry=6,ntree=200,keep.forest=TRUE)
+predfinal = predict(finalfit,newdata=testing)
+confusionMatrix(predfinal,testing$classe)
+predict(finalfit,newdata=test)
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+this final prediction is submitted for the quiz. if this is correct and not subject to overfitting, then the out of sample error should be very low. it could be zero for a sample of 20. a better estimate from a larger sample would be the estimate earlier from training/testing on 60%/40% respectively which showed out of sample error rates of <~0.6%.
