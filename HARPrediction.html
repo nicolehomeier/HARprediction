@@ -125,6 +125,7 @@ $(document).ready(function () {
 
 <div id="har-prediction-exercise-for-the-pml-course" class="section level1">
 <h1>HAR Prediction Exercise for the PML Course</h1>
+<p>Overview: The first set of steps is reducing the set of variables for prediction to only those that are useful. To do this I removed variables that are missing in the test data, variables where most are missing in the training data, and variables that likely do not contribute much predictive power. The next steps are training and evaluating models. I split the training set into a 60%/40% split for training/testing, then fit 4 models: a tree model, a linear discriminant analysis model, a nearest neighbors (nn) model, and a random forest (rf). The tree, nn, and rf models all had good accuracy in this evaluation, with the rf having the least error. I chose the rf to proceed with, fit a final model using all the training data, and predicted on the 20 row test set. I expected the error rate on this small set of data to be near zero, so could be that every case was predicted correctly. From the larger 60/40 split the expected error rate is less than 1%.</p>
 <pre class="r"><code>library(caret)</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
 <pre><code>## Loading required package: ggplot2</code></pre>
@@ -407,7 +408,8 @@ confusionMatrix(predrf,testing$classe)</code></pre>
 <pre class="r"><code>inTrain = createDataPartition(cnds$classe,p=(1-20/nrow(cnds)),list=TRUE)[[1]]
 training = cnds[inTrain,]
 testing = cnds[-inTrain,]</code></pre>
-<pre class="r"><code>finalfit = randomForest(classe~.,data=training,mtry=6,ntree=200,keep.forest=TRUE)
+<p>now use all the data for the final fit and quiz prediction</p>
+<pre class="r"><code>finalfit = randomForest(classe~.,data=cnds,mtry=6,ntree=200,keep.forest=TRUE)
 predfinal = predict(finalfit,newdata=testing)
 confusionMatrix(predfinal,testing$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
