@@ -1,1 +1,1 @@
-predict the activity classes, sitting-down, standing-up, standing, walking, and sitting, using a set of fitness band measurements
+predict the 5 activity classes using a set of fitness band measurements
